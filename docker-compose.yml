@@ -1,0 +1,85 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ai_service
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-shot: apply migrations before the app starts.
+  migrate:
+    build:
+      context: .
+      target: build
+    command: ["npx", "drizzle-kit", "migrate"]
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_service
+      REDIS_URL: redis://redis:6379
+      OPENROUTER_KEYS: ${OPENROUTER_KEYS}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      DEFAULT_MODEL: ${DEFAULT_MODEL:-openai/gpt-4o-mini}
+      SUMMARY_MODEL: ${SUMMARY_MODEL:-openai/gpt-4o-mini}
+      JWT_SECRET: ${JWT_SECRET:-dev-super-secret-change-me}
+      JWT_ALG: ${JWT_ALG:-HS256}
+      JWT_USER_CLAIM: ${JWT_USER_CLAIM:-sub}
+      RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-60}
+      USER_TOKEN_BUDGET: ${USER_TOKEN_BUDGET:-200000}
+      BUDGET_PERIOD: ${BUDGET_PERIOD:-day}
+      SUMMARIZE_AFTER_MESSAGES: ${SUMMARIZE_AFTER_MESSAGES:-20}
+      KEEP_RECENT_MESSAGES: ${KEEP_RECENT_MESSAGES:-10}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
+      CHAT_LOCK_TTL_MS: ${CHAT_LOCK_TTL_MS:-120000}
+      PORT: 3000
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
