@@ -1,12 +1,14 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_service
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18 moved its data dir to /var/lib/postgresql/{version}/docker and
+      # declares the volume at /var/lib/postgresql — mount there so data persists.
+      - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -16,7 +18,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
