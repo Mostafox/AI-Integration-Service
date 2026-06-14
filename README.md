@@ -103,8 +103,17 @@ curl localhost:3000/v1/chats/<chatId> -H "authorization: Bearer $TOKEN"
 ## Tests
 
 ```bash
-npm test     # vitest: keyPool, chatCache, chatLock, summarizer, usage, chatService
+npm test         # unit (hermetic): keyPool, chatCache, chatLock, summarizer, usage, chatService
+npm run test:e2e # integration against a LIVE server (bring the stack up first)
 ```
+
+The e2e suite ([test/e2e/app.e2e.test.ts](test/e2e/app.e2e.test.ts)) hits the running
+service over HTTP: health, auth (401), validation (400), no-active-chat (409),
+chat creation + persistence, the active-chat pointer, and ownership (404). It
+mints its own JWTs from `JWT_SECRET` (same `.env` the server reads) and is
+tolerant of OpenRouter being unavailable — the streamed reply may end in a
+`done` *or* an `error` event and the test still passes. Override the target with
+`E2E_BASE_URL` (default `http://localhost:3000`).
 
 ## Configuration
 

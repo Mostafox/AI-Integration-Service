@@ -56,6 +56,10 @@ Living checklist for the AI-interaction microservice. Update after every edit.
 - [x] `test/summarizer.test.ts`
 - [x] `test/usage.test.ts`
 - [x] `test/chatService.test.ts`
+- [x] `test/e2e/app.e2e.test.ts` — live-server integration suite (`npm run test:e2e`,
+      separate `vitest.e2e.config.ts`; 12 tests: health, auth, validation,
+      send→persist→fetch, active-chat pointer, ownership). Tolerant of OpenRouter
+      being unavailable (accepts `done` or `error` terminal SSE event).
 
 ## Tooling
 - [x] `scripts/mintJwt.ts` (mint a test end-user JWT)

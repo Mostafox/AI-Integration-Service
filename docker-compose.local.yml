@@ -1,0 +1,5 @@
+services:
+  postgres:
+    ports: !reset ["5433:5432"]
+  redis:
+    ports: !reset ["6380:6379"]
