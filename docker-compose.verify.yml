@@ -1,8 +1,0 @@
-services:
-  postgres:
-    ports: !reset []
-  redis:
-    ports: !reset []
-  app:
-    ports: !reset
-      - "3000:3000"
