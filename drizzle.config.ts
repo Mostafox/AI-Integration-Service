@@ -6,7 +6,7 @@ export default defineConfig({
   out: "./src/db/migrations",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://postgres:postgres@localhost:5432/ai_service",
+    url: process.env.DATABASE_URL ?? "postgres://yara:yara_secret_password@localhost:5434/yara_ai",
   },
   verbose: true,
   strict: true,

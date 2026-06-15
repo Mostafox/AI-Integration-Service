@@ -43,22 +43,34 @@ See [progress.md](progress.md) for the implementation checklist.
 
 ## Run it (Docker)
 
+Requires shared YARA infra on `yara-net` (see [../infra](../infra)).
+
 ```bash
-cp .env.example .env        # set OPENROUTER_KEYS=k1,k2,k3 and JWT_SECRET
-docker compose up --build   # postgres + redis + migrate + app
-curl localhost:3000/health  # 200 with masked key-pool status
+docker network create yara-net   # once
+cd ../infra && docker compose up -d
+
+cp .env.example .env           # set OPENROUTER_KEYS and sync creds with ../infra/.env
+docker compose up --build      # migrate + app (uses yara-postgres / yara-redis)
+curl localhost:3000/health     # 200 with masked key-pool status
 ```
 
-`docker compose up` brings up Postgres, Redis, runs migrations as a one-shot
-`migrate` service, then starts the app. The dev override
-(`docker-compose.override.yml`) runs the app via `tsx` with hot-reload.
+If infra was already running before `yara_ai` existed, create the database once:
+
+```bash
+docker exec -i yara-postgres psql -U yara -d postgres < ../infra/postgres/add-yara-ai.sql
+```
+
+`docker compose up` runs migrations as a one-shot `migrate` service, then starts the app.
+The dev override (`docker-compose.override.yml`) runs the app via `tsx` with hot-reload.
 
 ## Run it (local inner loop)
 
+Requires [../infra](../infra) Postgres + Redis on host ports `5434` / `6380`.
+
 ```bash
+cd ../infra && docker compose up -d
 npm install
-npm run db:generate         # generate SQL migrations from the Drizzle schema
-npm run db:migrate          # apply them (needs DATABASE_URL)
+npm run db:migrate          # apply migrations (needs DATABASE_URL)
 npm run dev                 # tsx watch
 ```
 

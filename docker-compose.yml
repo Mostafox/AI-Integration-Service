@@ -1,36 +1,13 @@
+# Joins shared YARA infra on yara-net (see ../infra).
+#
+#   docker network create yara-net   # once
+#   cd ../infra && docker compose up -d
+#   cd ../AI-Integration-Service && docker compose up --build
+#
+# If infra already existed before yara_ai was added:
+#   docker exec -i yara-postgres psql -U yara -d postgres < ../infra/postgres/add-yara-ai.sql
+
 services:
-  postgres:
-    image: postgres:18-alpine
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_service
-    volumes:
-      # Postgres 18 moved its data dir to /var/lib/postgresql/{version}/docker and
-      # declares the volume at /var/lib/postgresql — mount there so data persists.
-      - pgdata:/var/lib/postgresql
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_service"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:8-alpine
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redisdata:/data
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  # One-shot: apply migrations before the app starts.
   migrate:
     build:
       context: .
@@ -39,35 +16,30 @@ services:
     env_file:
       - .env
     environment:
-      # Override the .env value (which points at localhost) for the compose network.
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_service
-    depends_on:
-      postgres:
-        condition: service_healthy
+      DATABASE_URL: postgres://${POSTGRES_USER:-yara}:${POSTGRES_PASSWORD:-yara_secret_password}@yara-postgres:5432/${AI_DATABASE_NAME:-yara_ai}
+    networks:
+      - yara-net
     restart: "no"
 
   app:
     build:
       context: .
       target: runner
+    container_name: ai-integration-service
     env_file:
       - .env
     environment:
-      # Compose-network overrides: the .env values point at localhost, which
-      # doesn't resolve between containers. Everything else comes from .env.
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ai_service
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://${POSTGRES_USER:-yara}:${POSTGRES_PASSWORD:-yara_secret_password}@yara-postgres:5432/${AI_DATABASE_NAME:-yara_ai}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-yara_redis_password}@yara-redis:6379
       PORT: 3000
       NODE_ENV: production
     ports:
       - "3000:3000"
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
       migrate:
         condition: service_completed_successfully
+    networks:
+      - yara-net
     healthcheck:
       test:
         ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -75,6 +47,6 @@ services:
       timeout: 5s
       retries: 5
 
-volumes:
-  pgdata:
-  redisdata:
+networks:
+  yara-net:
+    external: true

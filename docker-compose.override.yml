@@ -1,5 +1,5 @@
-# Dev override: run the app with tsx hot-reload against compose-provided
-# Postgres + Redis. Used automatically by `docker compose up`.
+# Dev override: run the app with tsx hot-reload against shared YARA infra.
+# Used automatically by `docker compose up` (requires ../infra up on yara-net).
 services:
   app:
     build:

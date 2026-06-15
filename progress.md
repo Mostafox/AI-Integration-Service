@@ -45,7 +45,7 @@ Living checklist for the AI-interaction microservice. Update after every edit.
 
 ## Docker
 - [x] `Dockerfile` (multi-stage)
-- [x] `docker-compose.yml` (app + postgres + redis + migrate)
+- [x] `docker-compose.yml` (migrate + app on shared `yara-net` infra)
 - [x] `docker-compose.override.yml` (dev hot-reload)
 - [x] `.dockerignore`
 
@@ -74,4 +74,4 @@ Living checklist for the AI-interaction microservice. Update after every edit.
 
 ## Open / follow-up
 - [ ] Wire real OpenRouter keys in `.env` and smoke-test streaming end-to-end
-- [ ] `docker compose up` full-stack smoke test (needs Docker running)
+- [ ] `docker compose up` full-stack smoke test (needs ../infra + Docker running)
