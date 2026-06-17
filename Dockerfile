@@ -11,6 +11,14 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
+# --- migrate: ensure DB + drizzle migrations (no app compile) ---
+FROM node:20-alpine AS migrate
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json drizzle.config.ts ./
+COPY scripts ./scripts
+COPY src/db ./src/db
+
 # --- prod-deps: prune to production deps only ---
 FROM node:20-alpine AS prod-deps
 WORKDIR /app

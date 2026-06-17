@@ -54,13 +54,8 @@ docker compose up --build      # migrate + app (uses yara-postgres / yara-redis)
 curl localhost:3000/health     # 200 with masked key-pool status
 ```
 
-If infra was already running before `yara_ai` existed, create the database once:
-
-```bash
-docker exec -i yara-postgres psql -U yara -d postgres < ../infra/postgres/add-yara-ai.sql
-```
-
-`docker compose up` runs migrations as a one-shot `migrate` service, then starts the app.
+`docker compose up` runs a one-shot `migrate` service that creates the `yara_ai`
+database if needed, applies Drizzle migrations, then starts the app.
 The dev override (`docker-compose.override.yml`) runs the app via `tsx` with hot-reload.
 
 ## Run it (local inner loop)

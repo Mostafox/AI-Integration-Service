@@ -4,19 +4,17 @@
 #   cd ../infra && docker compose up -d
 #   cd ../AI-Integration-Service && docker compose up --build
 #
-# If infra already existed before yara_ai was added:
-#   docker exec -i yara-postgres psql -U yara -d postgres < ../infra/postgres/add-yara-ai.sql
-
 services:
   migrate:
     build:
       context: .
-      target: build
-    command: ["npx", "drizzle-kit", "migrate"]
+      target: migrate
+    command: ["npm", "run", "db:migrate"]
     env_file:
       - .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-yara}:${POSTGRES_PASSWORD:-yara_secret_password}@yara-postgres:5432/${AI_DATABASE_NAME:-yara_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-yara}
     networks:
       - yara-net
     restart: "no"
