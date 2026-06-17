@@ -62,6 +62,7 @@ export interface SendMessageRequest {
   message: string;
   newChat?: boolean;
   systemPrompt?: string;
+  contextPrompt?: string;
   title?: string;
   model?: string;
 }

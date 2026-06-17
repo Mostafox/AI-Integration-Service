@@ -80,7 +80,11 @@ function autoTitle(message: string): string {
 }
 
 /** Flatten a bounded context + new message into the OpenRouter prompt array. */
-function buildPrompt(ctx: ChatContext, newMessage: string): ChatMessage[] {
+function buildPrompt(
+  ctx: ChatContext,
+  newMessage: string,
+  contextPrompt?: string
+): ChatMessage[] {
   const prompt: ChatMessage[] = [];
   if (ctx.systemPrompt) prompt.push({ role: "system", content: ctx.systemPrompt });
   if (ctx.summary) {
@@ -88,6 +92,9 @@ function buildPrompt(ctx: ChatContext, newMessage: string): ChatMessage[] {
       role: "system",
       content: `Summary of earlier conversation:\n${ctx.summary}`,
     });
+  }
+  if (contextPrompt?.trim()) {
+    prompt.push({ role: "system", content: contextPrompt.trim() });
   }
   for (const m of ctx.recent) prompt.push({ role: m.role, content: m.content });
   prompt.push({ role: "user", content: newMessage });
@@ -177,7 +184,7 @@ export class ChatService {
       if (summary.summarized) await cache.invalidate(chatId);
 
       const ctx = await this.loadContext(chatId);
-      const prompt = buildPrompt(ctx, body.message);
+      const prompt = buildPrompt(ctx, body.message, body.contextPrompt);
 
       // (a) Persist the user message in parallel with starting the stream.
       const userPersist = repo

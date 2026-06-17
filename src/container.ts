@@ -50,4 +50,4 @@ export const chatService = new ChatService({
   defaultModel: config.openrouter.defaultModel,
 });
 
-export { repo as chatRepo, cache as chatCache };
+export { repo as chatRepo, cache as chatCache, openrouter };

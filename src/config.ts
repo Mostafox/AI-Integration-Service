@@ -48,6 +48,17 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.string().default("info"),
   NODE_ENV: z.string().default("development"),
+
+  // Redis Streams bus (ai.query consumer)
+  AI_STREAMS_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v !== "false" && v !== "0"),
+  AI_DEFAULT_SYSTEM_PROMPT: z
+    .string()
+    .default(
+      "شما دستیار فروشگاه آنلاین هستید. به زبان فارسی، مودبانه و مختصر پاسخ دهید. فقط بر اساس اطلاعات فروشگاه و محصولات پاسخ بدهید."
+    ),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -99,6 +110,12 @@ export const config = Object.freeze({
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     nodeEnv: env.NODE_ENV,
+  },
+  bus: {
+    enabled: env.AI_STREAMS_ENABLED,
+  },
+  ai: {
+    defaultSystemPrompt: env.AI_DEFAULT_SYSTEM_PROMPT,
   },
 });
 

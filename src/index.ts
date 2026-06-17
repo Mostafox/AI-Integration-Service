@@ -3,8 +3,13 @@ import { config } from "./config.js";
 import { createApp } from "./server/app.js";
 import { closeDb } from "./db/index.js";
 import { closeRedis } from "./redis.js";
+import { chatService, openrouter, keyPool } from "./container.js";
+import { startAiRequestConsumer } from "./bus/aiRequestConsumer.js";
+import type { AiRequestConsumerHandle } from "./bus/aiRequestConsumer.js";
 
 const app = createApp();
+
+let aiConsumer: AiRequestConsumerHandle | null = null;
 
 const server = serve(
   { fetch: app.fetch, port: config.server.port },
@@ -18,8 +23,13 @@ const server = serve(
         env: config.server.nodeEnv,
         keys: config.openrouter.keys.length,
         defaultModel: config.openrouter.defaultModel,
+        aiStreams: config.bus.enabled,
       })
     );
+
+    if (config.bus.enabled) {
+      aiConsumer = startAiRequestConsumer(chatService, openrouter, keyPool, config);
+    }
   }
 );
 
@@ -27,6 +37,10 @@ async function shutdown(signal: string) {
   // eslint-disable-next-line no-console
   console.log(JSON.stringify({ level: "info", msg: "shutting down", signal }));
   server.close();
+  if (aiConsumer) {
+    await aiConsumer.stop();
+    aiConsumer = null;
+  }
   await Promise.allSettled([closeRedis(), closeDb()]);
   process.exit(0);
 }
