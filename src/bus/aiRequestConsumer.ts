@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import { hostname } from "os";
-import contracts from "@yara/contracts";
+import contracts from "@mostafox/contracts";
 import type { Config } from "../config.js";
 import type { ChatService } from "../core/chatService.js";
 import {
@@ -9,7 +9,7 @@ import {
 } from "../core/chatService.js";
 import type { OpenRouterClient } from "../core/openrouter.js";
 import type { KeyPool } from "../core/keyPool.js";
-import type { AiQueryPayload } from "@yara/contracts";
+import type { AiQueryPayload } from "@mostafox/contracts";
 
 const { parseEvent, createEvent, STREAMS, CONSUMER_GROUPS } = contracts;
 
