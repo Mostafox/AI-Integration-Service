@@ -1,6 +1,6 @@
 import Redis from "ioredis";
 import { hostname } from "os";
-import contracts from "@yara/contracts";
+import contracts from "@mostafox/contracts";
 import type { Config } from "../config.js";
 import type { ChatService } from "../core/chatService.js";
 import {
