@@ -3,7 +3,7 @@ import { config } from "./config.js";
 import { createApp } from "./server/app.js";
 import { closeDb } from "./db/index.js";
 import { closeRedis } from "./redis.js";
-import { chatService, openrouter, keyPool } from "./container.js";
+import { chatService, openrouter, keyPool, extractionService } from "./container.js";
 import { startAiRequestConsumer } from "./bus/aiRequestConsumer.js";
 import type { AiRequestConsumerHandle } from "./bus/aiRequestConsumer.js";
 
@@ -28,7 +28,13 @@ const server = serve(
     );
 
     if (config.bus.enabled) {
-      aiConsumer = startAiRequestConsumer(chatService, openrouter, keyPool, config);
+      aiConsumer = startAiRequestConsumer(
+        chatService,
+        openrouter,
+        keyPool,
+        extractionService,
+        config
+      );
     }
   }
 );

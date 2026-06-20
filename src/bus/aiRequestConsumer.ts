@@ -9,7 +9,8 @@ import {
 } from "../core/chatService.js";
 import type { OpenRouterClient } from "../core/openrouter.js";
 import type { KeyPool } from "../core/keyPool.js";
-import type { AiQueryPayload } from "@yara/contracts";
+import type { ExtractionService } from "../core/extractionService.js";
+import type { AiQueryPayload, ProductExtractPayload } from "@yara/contracts";
 
 const { parseEvent, createEvent, STREAMS, CONSUMER_GROUPS } = contracts;
 
@@ -35,6 +36,7 @@ export function startAiRequestConsumer(
   chatService: ChatService,
   openrouter: OpenRouterClient,
   keyPool: KeyPool,
+  extractionService: ExtractionService,
   config: Config
 ): AiRequestConsumerHandle {
   const client = new Redis(config.redisUrl, {
@@ -215,6 +217,59 @@ export function startAiRequestConsumer(
     }
   };
 
+  const publishExtracted = async (
+    payload: ProductExtractPayload,
+    result:
+      | { status: "ok"; fields: import("@yara/contracts").ExtractedProductFields; confidence: number }
+      | { status: "error"; errorReason: string }
+  ): Promise<void> => {
+    const event = createEvent(
+      "product.extracted",
+      {
+        correlationId: payload.correlationId,
+        shopId: payload.shopId,
+        intakeId: payload.intakeId,
+        status: result.status,
+        fields: result.status === "ok" ? result.fields : undefined,
+        confidence: result.status === "ok" ? result.confidence : 0,
+        errorReason: result.status === "error" ? result.errorReason : undefined,
+      },
+      "ai-service"
+    );
+
+    await client.xadd(
+      RESPONSE_STREAM,
+      "*",
+      "id",
+      event.id,
+      "data",
+      JSON.stringify(event)
+    );
+  };
+
+  const handleExtract = async (payload: ProductExtractPayload): Promise<void> => {
+    try {
+      const { fields, confidence } = await extractionService.extract({
+        caption: payload.caption,
+        imageRefs: payload.imageRefs,
+      });
+      await publishExtracted(payload, { status: "ok", fields, confidence });
+    } catch (err) {
+      const name = (err as Error).name || "Error";
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "product.extract failed",
+          correlationId: payload.correlationId,
+          intakeId: payload.intakeId,
+          error: (err as Error).message,
+          name,
+        })
+      );
+      await publishExtracted(payload, { status: "error", errorReason: name });
+    }
+  };
+
   const processMessage = async (msgId: string, fields: string[]): Promise<void> => {
     const dataIndex = fields.indexOf("data");
     const raw = dataIndex >= 0 ? fields[dataIndex + 1] : null;
@@ -240,12 +295,13 @@ export function startAiRequestConsumer(
       return;
     }
 
-    if (event.type !== "ai.query") {
-      await client.xack(STREAM, GROUP, msgId).catch(() => undefined);
-      return;
+    if (event.type === "ai.query") {
+      await handleQuery(event.payload as AiQueryPayload);
+    } else if (event.type === "product.extract") {
+      await handleExtract(event.payload as ProductExtractPayload);
     }
+    // Any other type on this stream is acked and ignored below.
 
-    await handleQuery(event.payload as AiQueryPayload);
     await client.xack(STREAM, GROUP, msgId).catch(() => undefined);
   };
 

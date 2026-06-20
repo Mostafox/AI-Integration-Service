@@ -1,5 +1,16 @@
 import type { ChatMessage, StreamDelta, TokenUsage } from "./types.js";
 
+/** A single content part of a multimodal (vision) message. */
+export type VisionContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+/** A message whose content may be plain text or an array of multimodal parts. */
+export interface VisionMessage {
+  role: "system" | "user" | "assistant";
+  content: string | VisionContentPart[];
+}
+
 /**
  * Minimal OpenRouter client built on native fetch.
  * - streamChat: SSE streaming chat completion (yields text deltas + final usage)
@@ -184,6 +195,47 @@ export class OpenRouterClient {
       method: "POST",
       headers: this.headers(apiKey),
       body: JSON.stringify({ model, messages, stream: false }),
+      signal,
+    });
+
+    if (res.status === 429) {
+      throw new OpenRouterRateLimitError(parseRetryAfter(res));
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new OpenRouterError(res.status, `OpenRouter ${res.status}: ${text.slice(0, 500)}`);
+    }
+
+    const json: any = await res.json();
+    return {
+      text: json.choices?.[0]?.message?.content ?? "",
+      usage: normalizeUsage(json.usage),
+    };
+  }
+
+  /**
+   * Non-streaming multimodal completion. Accepts messages whose content may be
+   * an array of text/image parts. Used for product extraction from photos +
+   * caption. Forces a JSON object response so callers can parse deterministically.
+   *
+   * Throws OpenRouterRateLimitError on 429 (so the caller can rotate keys);
+   * OpenRouterError on other non-2xx.
+   */
+  async completeVision(
+    apiKey: string,
+    model: string,
+    messages: VisionMessage[],
+    signal?: AbortSignal
+  ): Promise<{ text: string; usage?: TokenUsage }> {
+    const res = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: this.headers(apiKey),
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: false,
+        response_format: { type: "json_object" },
+      }),
       signal,
     });
 

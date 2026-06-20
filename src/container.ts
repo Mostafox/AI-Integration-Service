@@ -10,6 +10,7 @@ import { KeyPool } from "./core/keyPool.js";
 import { OpenRouterClient } from "./core/openrouter.js";
 import { Summarizer } from "./core/summarizer.js";
 import { DrizzleUsageStore, UsageTracker } from "./core/usage.js";
+import { ExtractionService } from "./core/extractionService.js";
 
 /**
  * Composition root: builds the core library from config + db + redis and wires
@@ -48,6 +49,13 @@ export const chatService = new ChatService({
   summarizer,
   usage,
   defaultModel: config.openrouter.defaultModel,
+});
+
+export const extractionService = new ExtractionService({
+  openrouter,
+  keyPool,
+  usage,
+  model: config.openrouter.visionModel,
 });
 
 export { repo as chatRepo, cache as chatCache, openrouter };

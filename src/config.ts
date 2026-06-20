@@ -22,6 +22,7 @@ const EnvSchema = z.object({
   OPENROUTER_BASE_URL: z.string().url().default("https://openrouter.ai/api/v1"),
   DEFAULT_MODEL: z.string().default("openai/gpt-4o-mini"),
   SUMMARY_MODEL: z.string().default("openai/gpt-4o-mini"),
+  VISION_MODEL: z.string().default("openai/gpt-4o-mini"),
 
   // Postgres / Redis
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
@@ -86,6 +87,7 @@ export const config = Object.freeze({
     baseUrl: env.OPENROUTER_BASE_URL,
     defaultModel: env.DEFAULT_MODEL,
     summaryModel: env.SUMMARY_MODEL,
+    visionModel: env.VISION_MODEL,
   },
   databaseUrl: env.DATABASE_URL,
   redisUrl: env.REDIS_URL,
